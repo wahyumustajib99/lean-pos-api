@@ -1,0 +1,82 @@
+
+:root {
+    --bg-primary: #f8fafc;
+    --surface: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --primary: #2563eb;
+    --border: #e2e8f0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+body { background-color: var(--bg-primary); color: var(--text-main); display: flex; min-height: 100vh; }
+
+/* Sidebar */
+aside { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 16px; position: fixed; height: 100vh; z-index: 100; }
+.brand { font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 32px; display: flex; align-items: center; gap: 8px; }
+.nav-menu { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; color: var(--text-muted); text-decoration: none; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.nav-item:hover, .nav-item.active { background: #eff6ff; color: var(--primary); }
+
+/* Konten Utama */
+main { margin-left: 240px; flex: 1; padding: 40px; width: calc(100% - 240px); }
+.page { display: none; }
+.page.active { display: block; }
+h2 { margin-bottom: 24px; font-weight: 600; }
+
+/* Dashboard */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 32px; }
+.stat-card { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); }
+.stat-card p { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 8px; }
+.stat-card h3 { font-size: 1.75rem; font-weight: 700; }
+.chart-container { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); height: 320px; }
+
+/* Kasir / Transaksi */
+.pos-container { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
+.search-box { background: var(--surface); border: 1px solid var(--border); padding: 12px; border-radius: 12px; margin-bottom: 16px; width: 100%; font-size: 0.95rem; outline: none; }
+.products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+.product-card { background: var(--surface); border: 1px solid var(--border); padding: 16px; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+.product-card:hover { transform: translateY(-2px); border-color: var(--primary); }
+.product-card h4 { font-size: 1rem; margin-bottom: 4px; }
+.product-card .price { color: var(--primary); font-weight: 600; font-size: 0.875rem; }
+.product-card .stock { color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; }
+
+.cart-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: sticky; top: 40px; }
+.cart-title { font-weight: 600; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.cart-items { max-height: 200px; overflow-y: auto; margin-bottom: 16px; }
+.cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.9rem; }
+
+/* DataTables Custom Style Override */
+.table-container { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+
+@media (max-width: 992px) {
+    aside { width: 80px; padding: 20px 8px; }
+    aside .brand span, aside .nav-item span { display: none; }
+    main { margin-left: 80px; width: calc(100% - 80px); padding: 24px; }
+    .pos-container { grid-template-columns: 1fr; }
+}
+  
+/* Gaya Khusus saat Printer Mencetak Struk */
+/* Aturan CSS Khusus untuk Printer */
+/* --- Tambahkan ini di CSS Utama Anda (Di Luar @media print) --- */
+#notaCetakSatuan {
+    display: none; /* Menyembunyikan nota sepenuhnya dari layar monitor kasir */
+}
+
+/* --- Pastikan aturan @media print Anda tetap seperti ini --- */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #notaCetakSatuan, #notaCetakSatuan * {
+        visibility: visible;
+    }
+    #notaCetakSatuan {
+        display: block !important; /* Memaksa nota muncul kembali HANYA saat diprint */
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 300px;
+    }
+}

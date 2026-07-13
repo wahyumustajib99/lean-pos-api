@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lean POS System - Pro Version</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+    
+</head>
+<body>
+
+    <aside>
+        <div class="brand"><i data-lucide="store"></i><span>LeanPOS Pro</span></div>
+        <ul class="nav-menu">
+            <li><a class="nav-item active" onclick="switchPage('dashboard')"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li>
+            <li><a class="nav-item" onclick="switchPage('transaksi')"><i data-lucide="shopping-cart"></i><span>Transaksi</span></a></li>
+            <li><a class="nav-item" onclick="switchPage('barang')"><i data-lucide="package"></i><span>Barang</span></a></li>
+            <li><a class="nav-item" onclick="switchPage('laporan')"><i data-lucide="file-text"></i><span>Laporan</span></a></li>
+        </ul>
+    </aside>
+
+    <main>
+        <section id="dashboard" class="page active">
+            <h2>Dashboard Analitik</h2>
+            <div class="stats-grid">
+                <div class="stat-card"><p>Pendapatan Hari Ini</p><h3 id="dashRevenue">Rp 0</h3></div>
+                <div class="stat-card"><p>Total Produk</p><h3 id="dashItems">0 SKU</h3></div>
+                <div class="stat-card"><p>Status Database</p><h3><span class="text-success">● Connected</span></h3></div>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-8">
+                    <div class="card p-3 shadow-sm border-0 mb-4" style="height: 300px;">
+                        <h6 class="fw-bold text-muted mb-2">Tren Penjualan Harian (7 Hari Terakhir)</h6>
+                        <canvas id="chartHarian"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3 shadow-sm border-0 mb-4" style="height: 300px;">
+                        <h6 class="fw-bold text-muted mb-2">Produk Terlaris</h6>
+                        <canvas id="chartDonut"></canvas>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card p-3 shadow-sm border-0" style="height: 300px;">
+                        <h6 class="fw-bold text-muted mb-2">Performa Omzet Bulanan</h6>
+                        <canvas id="chartBulanan"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="transaksi" class="page">
+            <h2>Kasir Penjualan</h2>
+            <div class="pos-container">
+                <div>
+                    <input type="text" class="search-box" id="searchKasir" placeholder="🔍 Cari nama barang atau kode produk di sini..." onkeyup="filterBarangKasir()">
+                    <div class="products-grid" id="productGrid"></div>
+                </div>
+                <div class="cart-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <div class="fw-bold">Keranjang Belanja</div>
+                        <button class="btn btn-sm btn-outline-danger py-1" onclick="kosongkanKeranjang()">Kosongkan</button>
+                    </div>
+                    
+                    <div class="cart-items" id="cartItems">
+                        <p class="text-muted small">Keranjang masih kosong.</p>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-3 fw-bold">
+                        <span>Total:</span><span id="cartTotal">Rp 0</span>
+                    </div>
+                    <button class="btn btn-success w-100 py-2 fw-bold" onclick="checkout()">Bayar & Cetak Struk</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="barang" class="page">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Kelola Stok Barang</h2>
+                <button class="btn btn-primary d-flex align-items-center gap-2" onclick="openAddModal()">
+                    <i data-lucide="plus-circle" style="width:18px"></i> Tambah Barang
+                </button>
+            </div>
+            <div class="table-container">
+                <table id="barangTable" class="table table-striped table-hover w-100">
+                    <thead>
+                        <tr><th>Kode</th><th>Nama Barang</th><th>Harga Jual</th><th>Stok</th><th>Aksi</th></tr>
+                    </thead>
+                    <tbody id="inventoryTable"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="laporan" class="page">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Laporan Penjualan</h2>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-danger d-flex align-items-center gap-2" onclick="exportPDF()">
+                        <i data-lucide="file-down" style="width:18px"></i> Download PDF
+                    </button>
+                    <button class="btn btn-outline-success d-flex align-items-center gap-2" onclick="exportExcel()">
+                        <i data-lucide="download" style="width:18px"></i> Download XLSX
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="laporanTable" class="table table-bordered w-100">
+                    <thead>
+                        <tr>
+                            <th>No. Invoice</th>
+                            <th>Tanggal Transaksi</th>
+                            <th>Total Pembayaran</th>
+                            <th>Aksi</th> </tr>
+                    </thead>
+                    <tbody id="laporanTableBody">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div class="modal fade" id="barangModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Tambah Barang Baru</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formBarang">
+                        <input type="hidden" id="barangId">
+                        <div class="mb-3">
+                            <label class="form-label">Kode Produk</label>
+                            <input type="text" class="form-control" id="kodeProduk" required placeholder="Contoh: BRG005">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nama Barang</label>
+                            <input type="text" class="form-control" id="namaProduk" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Harga Jual (Rp)</label>
+                            <input type="number" class="form-control" id="hargaJual" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Jumlah Stok</label>
+                            <input type="number" class="form-control" id="stokBarang" required>
+                        </div>
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary">Simpan ke MySQL</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        let globalProdukData = [];
+        let keranjang = [];
+        let dataTableInstansi;
+
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        async function fetchProdukDariDB() {
+            try {
+                // 1. Ambil data produk
+                const response = await fetch(`${API_URL}/produk`);
+                globalProdukData = await response.json();
+                renderKatalogKasir();
+                renderTabelInventori();
+                document.getElementById('dashItems').innerText = `${globalProdukData.length} SKU`;
+
+                // 2. Ambil data laporan transaksi riil dari MySQL
+                const resLaporan = await fetch(`${API_URL}/laporan`);
+                const dataLaporan = await resLaporan.json();
+                renderTabelLaporan(dataLaporan);
+                
+            } catch (error) {
+                console.error("Gagal sinkronisasi data dengan backend API.", error);
+            }
+        }
+
+
+        // 1. Render Tabel Laporan dengan Tambahan Tombol Aksi Cetak Per Baris
+        // Instance global khusus untuk DataTable Laporan
+        let laporanTableInstansi = null;
+
+        function renderTabelLaporan(dataLaporan) {
+            // 1. Hancurkan DataTable yang lama secara bersih (jika sudah pernah diinisialisasi)
+            if ($.fn.DataTable.isDataTable('#laporanTable')) {
+                $('#laporanTable').DataTable().destroy();
+            }
+            
+            // 2. Kosongkan isi body tabel sebelum diisi data baru
+            const tbody = document.getElementById('laporanTableBody');
+            tbody.innerHTML = '';
+            
+            let totalPendapatan = 0;
+            
+            // 3. Masukkan data real dari MySQL ke dalam baris tabel
+            dataLaporan.forEach(l => {
+                totalPendapatan += l.total_bayar;
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${l.nomor_invoice}</strong></td>
+                        <td>${l.tanggal_format}</td>
+                        <td>Rp ${l.total_bayar.toLocaleString('id-ID')}</td>
+                        <td>
+                            <button class="btn btn-sm btn-dark d-inline-flex align-items-center gap-1" onclick="cetakNotaSatuan('${l.nomor_invoice}', '${l.tanggal_format}', ${l.total_bayar})">
+                                <i data-lucide="printer" style="width:14px;height:14px;"></i> Cetak Nota
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            // Update total pendapatan hari ini di dashboard
+            document.getElementById('dashRevenue').innerText = `Rp ${totalPendapatan.toLocaleString('id-ID')}`;
+
+            // 4. Inisialisasi ulang DataTables dengan konfigurasi yang aman
+            laporanTableInstansi = $('#laporanTable').DataTable({
+                pageLength: 5,
+                lengthMenu: [5, 10, 25],
+                destroy: true, // Mengizinkan tabel dihancurkan secara aman saat ada data baru
+                retrieve: true,
+                language: { 
+                    search: "Cari Invoice: ",
+                    lengthMenu: "Tampilkan _MENU_ data",
+                    zeroRecords: "Tidak ada data transaksi ditemukan",
+                    info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ transaksi",
+                    paginate: {
+                        next: "Berikutnya",
+                        previous: "Sebelumnya"
+                    }
+                }
+            });
+
+            // Render ulang icon Lucide agar tombol cetak muncul ikon printernya
+            lucide.createIcons();
+        }
+
+        // 2. Fungsi Mengambil Detail Barang dari MySQL lalu memicu Printer Cetak
+        async function cetakNotaSatuan(invoiceNum, tanggal, totalBayar) {
+            try {
+                // Ambil data detail barang berdasarkan nomor invoice terpilih
+                const response = await fetch(`${API_URL}/laporan/${invoiceNum}`);
+                const detailBarang = await response.json();
+
+                // Tulis data ke template nota tersembunyi
+                document.getElementById('notaInvoice').innerText = `No: ${invoiceNum}`;
+                document.getElementById('notaTanggal').innerText = `Tgl: ${tanggal}`;
+                document.getElementById('notaTotal').innerText = `Rp ${totalBayar.toLocaleString('id-ID')}`;
+
+                const listContainer = document.getElementById('notaListBarang');
+                listContainer.innerHTML = '';
+
+                // Tulis baris rincian barang belanjaan
+                detailBarang.forEach(item => {
+                    listContainer.innerHTML += `
+                        <div style="margin-bottom: 4px;">
+                            <div>${item.nama_produk}</div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #333;">
+                                <span>${item.jumlah} x Rp ${item.harga_jual.toLocaleString('id-ID')}</span>
+                                <span>Rp ${item.subtotal.toLocaleString('id-ID')}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Picu dialog cetak printer bawaan komputer/browser secara instan
+                window.print();
+
+            } catch (error) {
+                alert('Gagal memuat detail barang dari database untuk invoice ini.');
+                console.error(error);
+            }
+        }
+
+        // Render & Fitur Filter Pencarian Halaman Transaksi Kasir
+        function renderKatalogKasir(filterText = '') {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '';
+            
+            const filtered = globalProdukData.filter(p => 
+                p.nama_produk.toLowerCase().includes(filterText.toLowerCase()) || 
+                p.kode_produk.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            filtered.forEach(p => {
+                grid.innerHTML += `
+                    <div class="product-card" onclick="addToCart(${p.id})">
+                        <h4 class="fw-bold">${p.nama_produk}</h4>
+                        <div class="price">Rp ${p.harga_jual.toLocaleString('id-ID')}</div>
+                        <div class="stock text-muted">Sisa: ${p.stok} pcs</div>
+                    </div>
+                `;
+            });
+        }
+
+        function filterBarangKasir() {
+            const txt = document.getElementById('searchKasir').value;
+            renderKatalogKasir(txt);
+        }
+
+        // Render DataTable untuk Manajemen Barang Master
+        function renderTabelInventori() {
+            if (dataTableInstansi) dataTableInstansi.destroy(); // hancurkan instansi lama sebelum ditulis ulang
+            
+            const tbody = document.getElementById('inventoryTable');
+            tbody.innerHTML = '';
+            
+            globalProdukData.forEach(p => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${p.kode_produk}</strong></td>
+                        <td>${p.nama_produk}</td>
+                        <td>Rp ${p.harga_jual.toLocaleString('id-ID')}</td>
+                        <td>${p.stok} pcs</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning me-1" onclick='openEditModal(${JSON.stringify(p)})'>Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="hapusBarang(${p.id})">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Aktifkan Fitur Pencarian & Paging Otomatis DataTables jQuery
+            dataTableInstansi = $('#barangTable').DataTable({
+                pageLength: 5,
+                lengthMenu: [5, 10, 25],
+                language: { search: "Cari Cepat: ", lengthMenu: "Tampilkan _MENU_ data" }
+            });
+        }
+
+        // Tambah ke Keranjang Belanja
+        function addToCart(productId) {
+            const produk = globalProdukData.find(p => p.id === productId);
+            const itemInCart = keranjang.find(item => item.id === productId);
+
+            if (produk.stok <= 0) return alert('Stok barang di server MySQL kosong!');
+
+            if (itemInCart) {
+                if (itemInCart.qty >= produk.stok) return alert('Pembelian melewati batas stok saat ini!');
+                itemInCart.qty++;
+            } else {
+                keranjang.push({ ...produk, qty: 1 });
+            }
+            updateCartUI();
+        }
+
+        // Perbarui Tampilan Keranjang dengan Tombol Plus, Minus, dan Hapus
+        function updateCartUI() {
+            const container = document.getElementById('cartItems');
+            const totalText = document.getElementById('cartTotal');
+            
+            if (keranjang.length === 0) {
+                container.innerHTML = '<p class="text-muted small">Keranjang masih kosong.</p>';
+                totalText.innerText = 'Rp 0';
+                return;
+            }
+
+            container.innerHTML = '';
+            let total = 0;
+            keranjang.forEach(item => {
+                total += item.harga_jual * item.qty;
+                container.innerHTML += `
+                    <div class="cart-item d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <div style="flex: 1; max-width: 50%;">
+                            <div class="fw-semibold" style="font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.nama_produk}</div>
+                            <small class="text-muted">Rp ${item.harga_jual.toLocaleString('id-ID')}</small>
+                        </div>
+                        
+                        <div class="d-flex align-items-center gap-1 me-2">
+                            <button class="btn btn-sm btn-outline-primary px-1 py-0" onclick="ubahQtyMajuMundur(${item.id}, -1)">-</button>
+                            <span class="fw-bold px-1" style="min-width: 20px; text-align: center; font-size: 0.9rem;">${item.qty}</span>
+                            <button class="btn btn-sm btn-outline-primary px-1 py-0" onclick="ubahQtyMajuMundur(${item.id}, 1)">+</button>
+                        </div>
+
+                        <div class="text-end me-2" style="min-width: 70px;">
+                            <strong style="font-size: 0.9rem;">Rp ${(item.harga_jual * item.qty).toLocaleString('id-ID')}</strong>
+                        </div>
+                        
+                        <button class="btn btn-sm p-0 text-danger border-0 bg-transparent" onclick="hapusItemKeranjang(${item.id})" title="Hapus">
+                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            
+            totalText.innerText = `Rp ${total.toLocaleString('id-ID')}`;
+            lucide.createIcons(); // Render ulang ikon trash hancur-bangun dinamis
+        }
+
+        // Fungsi Naik Turun Jumlah Beli Item Keranjang
+        function ubahQtyMajuMundur(productId, arahPerubahan) {
+            const itemInCart = keranjang.find(item => item.id === productId);
+            const produkAsli = globalProdukData.find(p => p.id === productId);
+
+            if (!itemInCart) return;
+
+            // Jika menekan tombol tambah (+)
+            if (arahPerubahan === 1) {
+                if (itemInCart.qty >= produkAsli.stok) {
+                    alert(`Gagal menambah! Sisa stok ${produkAsli.nama_produk} di MySQL hanya ${produkAsli.stok} pcs.`);
+                    return;
+                }
+                itemInCart.qty++;
+            } 
+            // Jika menekan tombol kurang (-)
+            else if (arahPerubahan === -1) {
+                itemInCart.qty--;
+                // Jika kuantitas menjadi 0, otomatis tendang keluar dari keranjang
+                if (itemInCart.qty <= 0) {
+                    keranjang = keranjang.filter(item => item.id !== productId);
+                }
+            }
+
+            updateCartUI(); // Segarkan visual keranjang belanja
+        }
+
+        // 2. Fungsi Menghapus Satu Jenis Barang dari Keranjang
+        function hapusItemKeranjang(productId) {
+            keranjang = keranjang.filter(item => item.id !== productId);
+            updateCartUI();
+        }
+
+        // 3. Fungsi Mengosongkan Seluruh Keranjang Belanja
+        function kosongkanKeranjang() {
+            if (keranjang.length === 0) return;
+            if (confirm('Kosongkan semua item di dalam keranjang?')) {
+                keranjang = [];
+                updateCartUI();
+            }
+        }
+
+        // 4. Proses Simpan ke MySQL + Otomatis Cetak Struk ke Printer
+        async function checkout() {
+            if (keranjang.length === 0) return alert('Keranjang belanja kosong!');
+            
+            const invoice = `INV-${Date.now()}`;
+            const total = keranjang.reduce((sum, item) => sum + (item.harga_jual * item.qty), 0);
+
+            try {
+                // Kirim data transaksi ke backend Node.js untuk disimpan di MySQL
+                const response = await fetch(`${API_URL}/transaksi`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nomor_invoice: invoice, total_bayar: total, items: keranjang })
+                });
+                
+                const res = await response.json();
+                
+                if (res.success) {
+                    // Pasang metadata tanggal saat ini untuk format cetak struk
+                    document.body.setAttribute('data-date', new Date().toLocaleString('id-ID'));
+                    
+                    // Perintah Native Browser untuk memicu dialog print komputer/thermal printer
+                    window.print();
+                    
+                    alert(`Transaksi ${invoice} berhasil disimpan ke MySQL dan dicetak!`);
+                    
+                    // Bersihkan sistem setelah sukses
+                    keranjang = [];
+                    updateCartUI();
+                    fetchProdukDariDB(); // Muat ulang stok barang & grafik dasbor terbaru
+                } else {
+                    alert('Gagal menyimpan transaksi: ' + res.error);
+                }
+            } catch (e) { 
+                alert('Gagal terhubung ke Server API Backend. Pastikan node server.js menyala.'); 
+            }
+        }
+
+        
+        
+
+        async function checkout() {
+            if (keranjang.length === 0) return alert('Keranjang belanja kosong!');
+            const invoice = `INV-${Date.now()}`;
+            const total = keranjang.reduce((sum, item) => sum + (item.harga_jual * item.qty), 0);
+
+            try {
+                const response = await fetch(`${API_URL}/transaksi`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nomor_invoice: invoice, total_bayar: total, items: keranjang })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    alert(`Transaksi Berhasil disimpan ke MySQL! Invoice: ${invoice}`);
+                    // Tambahkan data ke tabel laporan
+                    const row = `<tr><td>${invoice}</td><td>Hari ini</td><td>Rp ${total.toLocaleString('id-ID')}</td></tr>`;
+                    document.getElementById('laporanTableBody').innerHTML += row;
+                    document.getElementById('dashRevenue').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+                    keranjang = [];
+                    updateCartUI();
+                    fetchProdukDariDB();
+                }
+            } catch (e) { alert('Koneksi server gagal.'); }
+        }
+
+        /* --- FUNGSI MENGELOLA MODAL & CRUD DATA BARANG --- */
+        const bsModal = new bootstrap.Modal(document.getElementById('barangModal'));
+
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = "Tambah Barang Baru";
+            document.getElementById('formBarang').reset();
+            document.getElementById('barangId').value = "";
+            document.getElementById('kodeProduk').disabled = false;
+            bsModal.show();
+        }
+
+        function openEditModal(produk) {
+            document.getElementById('modalTitle').innerText = "Edit Data Barang";
+            document.getElementById('barangId').value = produk.id;
+            document.getElementById('kodeProduk').value = produk.kode_produk;
+            document.getElementById('kodeProduk').disabled = true; // Kode produk unik tidak boleh diedit
+            document.getElementById('namaProduk').value = produk.nama_produk;
+            document.getElementById('hargaJual').value = produk.harga_jual;
+            document.getElementById('stokBarang').value = produk.stok;
+            bsModal.show();
+        }
+
+        // Handler untuk Interaksi Submit Simpan / Ubah Data (Silakan hubungkan endpoint ini di Node.js jika perlu dikembangkan)
+        document.getElementById('formBarang').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const id = document.getElementById('barangId').value;
+        const kode_produk = document.getElementById('kodeProduk').value;
+        const nama_produk = document.getElementById('namaProduk').value;
+        const harga_jual = parseInt(document.getElementById('hargaJual').value);
+        const stok = parseInt(document.getElementById('stokBarang').value);
+
+        const payload = { kode_produk, nama_produk, harga_jual, stok };
+
+            try {
+                let response;
+                if (id === "") {
+                    // Mode Tambah: Jalankan HTTP POST
+                    response = await fetch(`${API_URL}/produk`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    // Mode Edit: Jalankan HTTP PUT
+                    response = await fetch(`${API_URL}/produk/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(result.message);
+                    bsModal.hide();
+                    fetchProdukDariDB(); // Muat ulang data terbaru dari database MySQL
+                } else {
+                    alert('Gagal memproses data: ' + result.error);
+                }
+            } catch (error) {
+                alert('Gagal terhubung ke server.');
+            }
+        });;
+
+        async function hapusBarang(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus data barang dari database MySQL?')) {
+                try {
+                    const response = await fetch(`${API_URL}/produk/${id}`, {
+                        method: 'DELETE'
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Barang berhasil dihapus dari database.');
+                        fetchProdukDariDB(); // Muat ulang tabel
+                    } else {
+                        alert('Gagal menghapus: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('Gagal terhubung ke server.');
+                }
+            }
+        }
+
+        /* --- LOGIKA EKSPOR LAPORAN (PDF & EXCEL) DIRECT CLIENT --- */
+        function exportExcel() {
+            const table = document.getElementById("laporanTable");
+            const workbook = XLSX.utils.table_to_book(table, { sheet: "Laporan POS" });
+            XLSX.writeFile(workbook, `Laporan_Penjualan_${Date.now()}.xlsx`);
+        }
+
+        function exportPDF() {
+            // Ambil data baris tabel laporan yang aktif saat ini
+            const dataKoleksi = [['No. Invoice', 'Tanggal Transaksi', 'Total Pendapatan']];
+            
+            // Ambil data langsung dari selector baris tabel di DOM browser
+            $('#laporanTableBody tr').each(function() {
+                const row = [];
+                $(this).find('td').each(function() {
+                    row.push($(this).text());
+                });
+                if(row.length > 0) dataKoleksi.push(row);
+            });
+
+            const docDefinition = {
+                content: [
+                    { text: 'LAPORAN RIWAYAT PENJUALAN LEANPOS', style: 'header' },
+                    { text: `Diekspor otomatis pada: ${new Date().toLocaleString('id-ID')}\n\n`, style: 'subheader' },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['*', '*', '*'],
+                            body: dataKoleksi
+                        }
+                    }
+                ],
+                styles: {
+                    header: { fontSize: 16, bold: true, color: '#2563eb', margin: [0, 0, 0, 10] },
+                    subheader: { fontSize: 10, italic: true, margin: [0, 0, 0, 20] }
+                }
+            };
+            pdfMake.createPdf(docDefinition).download(`Laporan_POS_${Date.now()}.pdf`);
+        }
+
+        // Variabel Global untuk menyimpan instance grafik agar bisa di-refresh tanpa tumpang tindih
+        let grafikHarianInstance, grafikBulananInstance, grafikDonutInstance;
+
+        // Fungsi Utama untuk Menarik Data Grafik dari MySQL dan Mengupdate Layar
+        async function updateSemuaGrafik() {
+            try {
+                const response = await fetch(`${API_URL}/analitik-grafik`);
+                const data = await response.json();
+
+                // 1. UPDATE GRAFIK GARIS (HARIAN)
+                const labelHarian = data.harian.map(item => item.hari);
+                const nilaiHarian = data.harian.map(item => item.total);
+                
+                if (grafikHarianInstance) grafikHarianInstance.destroy(); // Hancurkan grafik lama sebelum digambar ulang
+                grafikHarianInstance = new Chart(document.getElementById('chartHarian').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labelHarian.length ? labelHarian : ['Belum Ada Data'],
+                        datasets: [{
+                            label: 'Omzet (Rp)',
+                            data: nilaiHarian.length ? nilaiHarian : [0],
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                            borderWidth: 2.5,
+                            tension: 0.25,
+                            fill: true
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                // 2. UPDATE GRAFIK DONAT (PRODUK TERLARIS)
+                const labelDonut = data.donut.map(item => item.nama_produk);
+                const nilaiDonut = data.donut.map(item => item.total_terjual);
+
+                if (grafikDonutInstance) grafikDonutInstance.destroy();
+                grafikDonutInstance = new Chart(document.getElementById('chartDonut').getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: labelDonut.length ? labelDonut : ['Belum Ada Transaksi'],
+                        datasets: [{
+                            data: nilaiDonut.length ? nilaiDonut : [1],
+                            backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b']
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+                    }
+                });
+
+                // 3. UPDATE GRAFIK BATANG (BULANAN)
+                const labelBulanan = data.bulanan.map(item => item.bulan);
+                const nilaiBulanan = data.bulanan.map(item => item.total);
+
+                if (grafikBulananInstance) grafikBulananInstance.destroy();
+                grafikBulananInstance = new Chart(document.getElementById('chartBulanan').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labelBulanan.length ? labelBulanan : ['Januari'],
+                        datasets: [{
+                            label: 'Total Pendapatan (Rp)',
+                            data: nilaiBulanan.length ? nilaiBulanan : [0],
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+            } catch (error) {
+                console.error("Gagal memperbarui grafik dari database MySQL:", error);
+            }
+        }
+
+        // Terakhir, panggil fungsi grafik ini di dalam fetchProdukDariDB() agar otomatis ter-refresh setiap kali ada transaksi baru
+        async function fetchProdukDariDB() {
+            try {
+                const response = await fetch(`${API_URL}/produk`);
+                globalProdukData = await response.json();
+                renderKatalogKasir();
+                renderTabelInventori();
+                document.getElementById('dashItems').innerText = `${globalProdukData.length} SKU`;
+
+                const resLaporan = await fetch(`${API_URL}/laporan`);
+                const dataLaporan = await resLaporan.json();
+                renderTabelLaporan(dataLaporan);
+                
+                // PANGGIL DI SINI AGAR SETIAP HABIS CHECKOUT KASIR, GRAFIKNYA LANGSUNG BERUBAH
+                updateSemuaGrafik();
+                
+            } catch (error) {
+                console.error("Gagal sinkronisasi data dengan backend API.", error);
+            }
+        }
+
+        // Pastikan inisialisasi awal di window.onload dibersihkan dari fungsi pembuat grafik dummy bawaan yang lama
+        window.onload = function() {
+            lucide.createIcons();
+            fetchProdukDariDB(); // Fungsi ini sekarang otomatis memicu updateSemuaGrafik()
+        };
+    </script>
+    <div id="notaCetakSatuan" class="d-none-print">
+        <div style="text-align: center; font-family: monospace; font-size: 12px; max-width: 300px; margin: 0 auto;">
+            <h4>=== LEANPOS NOTA ===</h4>
+            <p id="notaInvoice" style="margin: 2px 0;"></p>
+            <p id="notaTanggal" style="margin: 2px 0;"></p>
+            <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+            <div id="notaListBarang" style="text-align: left;"></div>
+            <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+            <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                <span>TOTAL:</span>
+                <span id="notaTotal">Rp 0</span>
+            </div>
+            <hr style="border-top: 1px dashed #000; margin: 5px 0; ">
+            <p style="margin-top: 10px;">Terima Kasih Atas Kunjungan Anda</p>
+        </div>
+    </div>
+</body>
+</html>
