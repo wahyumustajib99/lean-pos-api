@@ -1,6 +1,6 @@
 This is made using 
 1. HTML
-2. CSS Bootstrap
+2. CRUD Modal Bootstrap
 3. ExpressJS
 4. Mysql Database
 
@@ -10,8 +10,9 @@ DAshboard
 Transaction
 <img width="1920" height="892" alt="image" src="https://github.com/user-attachments/assets/b93e3cf5-0991-49ed-b336-f645522e94d2" />
 
-CRUD Barang
-<img width="1920" height="892" alt="image" src="https://github.com/user-attachments/assets/8c503fe9-087c-4cd7-8850-0fefda2bc097" />
+CRUD Barang Modal Bootstrap
+<img width="1920" height="892" alt="image" src="https://github.com/user-attachments/assets/b09ca62f-bbc7-4da6-aa9b-383a56ce4366" />
+
 
 Report PAge
 <img width="1920" height="892" alt="image" src="https://github.com/user-attachments/assets/584afa5f-fa8c-4093-87b3-306aed0b8246" />
